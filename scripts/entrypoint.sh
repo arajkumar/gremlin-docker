@@ -1,9 +1,9 @@
 #! /usr/bin/bash
 
 # Files for which configuration needs to change
-SERVER_DIR=dynamodb-janusgraph-storage-backend/server/dynamodb-janusgraph-storage-backend-1.1.0/
+SERVER_DIR=dynamodb-janusgraph-storage-backend/server/dynamodb-janusgraph-storage-backend-1.2.0
 PROPS=${SERVER_DIR}/conf/gremlin-server/dynamodb.properties
-GREMLIN_CONF=${SERVER_DIR}/conf/gremlin-server/gremlin-server.yaml
+GREMLIN_CONF=${SERVER_DIR}/conf/gremlin-server/gremlin-server-new.yaml
 GREMLIN_HOST=0.0.0.0
 UUID=$(cat /proc/sys/kernel/random/uuid)
 STORAGE_BACKEND=com.amazon.janusgraph.diskstorage.dynamodb.DynamoDBStoreManager
@@ -24,14 +24,30 @@ else
     echo "graph.unique-instance-id=${UUID}" >> ${PROPS}
 fi
 
+if grep -i '^root.graph.storage-version=' "$PROPS" 1>/dev/null; then
+    sed -i.bckp 's#root.graph.storage-version=.*#root.graph.storage-version=1#' ${PROPS}
+else
+    echo "root.graph.storage-version=1" >> ${PROPS}
+fi
+
+if grep -i '^graph.storage-version=' "$PROPS" 1>/dev/null; then
+    sed -i.bckp 's#graph.storage-version=.*#graph.storage-version=2#' ${PROPS}
+else
+    echo "graph.storage-version=2" >> ${PROPS}
+fi
+
+if grep -i '^graph.allow-upgrade=' "$PROPS" 1>/dev/null; then
+    sed -i.bckp 's#graph.allow-upgrade=.*#graph.allow-upgrade=true#' ${PROPS}
+else
+    echo "root.graph.allow-upgrade=true" >> ${PROPS}
+fi
+
 echo "graph.titan-version=1.1.0-SNAPSHOT" >> ${PROPS}
 
 sed -i.bckp 's#consoleReporter: .*#consoleReporter: {enabled: false}, #' ${GREMLIN_CONF}
 sed -i.bckp 's#csvReporter: .*#csvReporter: {enabled: false}, #' ${GREMLIN_CONF}
 sed -i.bckp 's#jmxReporter: .*#jmxReporter: {enabled: false}, #' ${GREMLIN_CONF}
-sed -i.bckp 's#slf4jReporter: .*#slf4jReporter: {enabled: false}, #' ${GREMLIN_CONF}
-sed -i.bckp 's#gangliaReporter: .*#gangliaReporter: {enabled: false}, #' ${GREMLIN_CONF}
-sed -i.bckp 's#graphiteReporter: .*#graphiteReporter: {enabled: false}} #' ${GREMLIN_CONF}
+sed -i.bckp 's#slf4jReporter: .*#slf4jReporter: {enabled: false}} #' ${GREMLIN_CONF}
 
 if [ -n "$DYNAMODB_CLIENT_CREDENTIALS_CLASS_NAME" ]; then
     sed -i.bckp 's#storage.dynamodb.client.credentials.class-name=.*#storage.dynamodb.client.credentials.class-name='${DYNAMODB_CLIENT_CREDENTIALS_CLASS_NAME}'#' ${PROPS}
@@ -151,4 +167,4 @@ fi
 
 cd ${SERVER_DIR}
 
-exec bin/gremlin-server.sh conf/gremlin-server/gremlin-server.yaml
+exec bin/gremlin-server.sh conf/gremlin-server/gremlin-server-new.yaml
